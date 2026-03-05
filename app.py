@@ -1,6 +1,13 @@
 import streamlit as st
 import math
+import pandas as pd
 from PIL import Image
+
+# =====================================================
+# 🔁 CHANGE DATA MODE HERE ONLY
+# =====================================================
+DATA_MODE = "HARDCODED"   # Options: "HARDCODED" or "EXCEL"
+# =====================================================
 
 # --------------------------------
 # PAGE CONFIG
@@ -30,7 +37,6 @@ footer {visibility: hidden;}
     background-color: #B8D4D4;
 }
 
-/* Section title */
 .section-title {
     font-size: 20px;
     font-weight: 600;
@@ -39,27 +45,28 @@ footer {visibility: hidden;}
     margin-bottom: 15px;
 }
 
-/* Match selectbox height */
 div[data-baseweb="select"] > div {
     height: 36px !important;
     min-height: 36px !important;
 }
 
-/* Match text input height */
 input {
     height: 36px !important;
 }
 
-/* Make radius non-editable */
-input[aria-label="Radius X"],
-input[aria-label="Radius Y"] {
-    pointer-events: none;
+/* All read-only fields: block editing via CSS only — no blur, no grey */
+input[aria-label="Radius X (mm)"],
+input[aria-label="Radius Y (mm)"],
+input[aria-label="Theta (radians)"],
+input[aria-label="Theta (degrees)"],
+input[aria-label="r (mm)"] {
+    pointer-events: none !important;
     background-color: #FFFFFF !important;
     color: #000000 !important;
     opacity: 1 !important;
+    -webkit-text-fill-color: #000000 !important;
 }
 
-/* Button */
 div.stButton > button {
     background-color: #6FA8A8;
     color: white;
@@ -77,32 +84,63 @@ div.stButton > button:hover {
 </style>
 """, unsafe_allow_html=True)
 
+# --------------------------------
+# LOGO
+# --------------------------------
 logo = Image.open("assets/logo with title.png")
 
-col_logo1, col_logo2, col_logo3 = st.columns([1,2,3])
+col_logo1, col_logo2, col_logo3 = st.columns([1,2,2])
 with col_logo2:
     st.image(logo, width=420)
 
 # --------------------------------
-# HARDCODED RADIUS VALUES
+# HARDCODED DATA
 # --------------------------------
 propeller_data = {
-    14: {"radius_x": 7.10, "radius_y": 6.52},
-    15: {"radius_x": 7.48, "radius_y": 6.91},
-    16: {"radius_x": 8.03, "radius_y": 7.52},
-    17: {"radius_x": 8.42, "radius_y": 7.88},
-    18: {"radius_x": 8.95, "radius_y": 8.31},
-    19: {"radius_x": 9.37, "radius_y": 8.76},
-    20: {"radius_x": 9.92, "radius_y": 9.11},
-    21: {"radius_x": 10.36, "radius_y": 9.58},
-    22: {"radius_x": 10.87, "radius_y": 10.02},
-    23: {"radius_x": 11.28, "radius_y": 10.44},
-    24: {"radius_x": 11.75, "radius_y": 10.89},
-    25: {"radius_x": 12.19, "radius_y": 11.36},
-    26: {"radius_x": 12.63, "radius_y": 11.84},
-    27: {"radius_x": 13.08, "radius_y": 12.21},
-    28: {"radius_x": 13.54, "radius_y": 12.73},
+    14: {"radius_x": 100, "radius_y": 75},
+    15: {"radius_x": 105, "radius_y": 75},
+    16: {"radius_x": 105, "radius_y": 75},
+    17: {"radius_x": 110, "radius_y": 75},
+    18: {"radius_x": 125, "radius_y": 75},
+    20: {"radius_x": 130, "radius_y": 75},
+    22: {"radius_x": 130, "radius_y": 75},
+    24: {"radius_x": 155, "radius_y": 75},
+    26: {"radius_x": 165, "radius_y": 75},
+    28: {"radius_x": 170, "radius_y": 75},
+    30: {"radius_x": 190, "radius_y": 75},
+    32: {"radius_x": 210, "radius_y": 75},
 }
+
+# --------------------------------
+# DEFAULT DATA SOURCE
+# --------------------------------
+data_source = propeller_data  # ✅ Always defined
+
+# --------------------------------
+# LOAD EXCEL DATA (ONLY IF MODE = EXCEL)
+# --------------------------------
+if DATA_MODE == "EXCEL":
+    try:
+        df = pd.read_excel("propeller_data.xlsx")
+
+        excel_data = {}
+
+        for _, row in df.iterrows():
+            size = int(row["PropellerSize"])
+            excel_data[size] = {
+                "radius_x": float(row["RadiusX_mm"]),
+                "radius_y": float(row["RadiusY_mm"])
+            }
+
+        data_source = excel_data  # ✅ Correct assignment
+
+        col_msg1, col_msg2 = st.columns([3, 2])
+        with col_msg2:
+            st.success("Excel data loaded successfully.")
+
+    except Exception:
+        st.error("Excel file not found or invalid format.")
+        data_source = propeller_data  # fallback
 
 # --------------------------------
 # PROPELLER DETAILS
@@ -114,17 +152,17 @@ col1, col2, col3 = st.columns(3)
 with col1:
     selected_size = st.selectbox(
         "Propeller Size",
-        list(propeller_data.keys())
+        list(data_source.keys())
     )
 
-radius_x = propeller_data[selected_size]["radius_x"]
-radius_y = propeller_data[selected_size]["radius_y"]
+radius_x = data_source[selected_size]["radius_x"]
+radius_y = data_source[selected_size]["radius_y"]
 
 with col2:
-    st.text_input("Radius X", value=radius_x)
+    st.text_input("Radius X (mm)", value=radius_x)
 
 with col3:
-    st.text_input("Radius Y", value=radius_y)
+    st.text_input("Radius Y (mm)", value=radius_y)
 
 st.divider()
 
@@ -168,7 +206,7 @@ if calculate:
                 theta_deg = math.degrees(theta_rad)
                 small_r = radius_x * math.tan(theta_rad)
 
-        except:
+        except Exception:
             st.error("Please enter valid numeric values.")
 
 # --------------------------------
@@ -181,10 +219,11 @@ if theta_rad is not None:
     col6, col7, col8 = st.columns(3)
 
     with col6:
+        # No disabled=True — CSS pointer-events:none blocks editing without blurring
         st.text_input("Theta (radians)", value=round(theta_rad, 6))
 
     with col7:
         st.text_input("Theta (degrees)", value=round(theta_deg, 4))
 
     with col8:
-        st.text_input("r", value=round(small_r, 4))
+        st.text_input("r (mm)", value=round(small_r, 4))
