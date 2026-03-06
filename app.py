@@ -54,12 +54,15 @@ input {
     height: 36px !important;
 }
 
-/* All read-only fields: block editing via CSS only — no blur, no grey */
 input[aria-label="Radius X (mm)"],
 input[aria-label="Radius Y (mm)"],
 input[aria-label="Theta (radians)"],
 input[aria-label="Theta (degrees)"],
-input[aria-label="r (mm)"] {
+input[aria-label="r (mm)"],
+input[aria-label="2mm value"],
+input[aria-label="2.5mm value"],
+input[aria-label="3mm value"],
+input[aria-label="3.5mm value"] {
     pointer-events: none !important;
     background-color: #FFFFFF !important;
     color: #000000 !important;
@@ -114,7 +117,7 @@ propeller_data = {
 # --------------------------------
 # DEFAULT DATA SOURCE
 # --------------------------------
-data_source = propeller_data  # ✅ Always defined
+data_source = propeller_data
 
 # --------------------------------
 # LOAD EXCEL DATA (ONLY IF MODE = EXCEL)
@@ -122,25 +125,20 @@ data_source = propeller_data  # ✅ Always defined
 if DATA_MODE == "EXCEL":
     try:
         df = pd.read_excel("propeller_data.xlsx")
-
         excel_data = {}
-
         for _, row in df.iterrows():
             size = int(row["PropellerSize"])
             excel_data[size] = {
                 "radius_x": float(row["RadiusX_mm"]),
                 "radius_y": float(row["RadiusY_mm"])
             }
-
-        data_source = excel_data  # ✅ Correct assignment
-
+        data_source = excel_data
         col_msg1, col_msg2 = st.columns([3, 2])
         with col_msg2:
             st.success("Excel data loaded successfully.")
-
     except Exception:
         st.error("Excel file not found or invalid format.")
-        data_source = propeller_data  # fallback
+        data_source = propeller_data
 
 # --------------------------------
 # PROPELLER DETAILS
@@ -150,10 +148,7 @@ st.markdown('<div class="section-title">Propeller Details</div>', unsafe_allow_h
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    selected_size = st.selectbox(
-        "Propeller Size",
-        list(data_source.keys())
-    )
+    selected_size = st.selectbox("Propeller Size", list(data_source.keys()))
 
 radius_x = data_source[selected_size]["radius_x"]
 radius_y = data_source[selected_size]["radius_y"]
@@ -197,7 +192,6 @@ if calculate:
         try:
             mx = float(mass_x)
             my = float(mass_y)
-
             denominator = mx * radius_x
             if denominator == 0:
                 st.error("Mass X * Radius X cannot be zero.")
@@ -205,7 +199,6 @@ if calculate:
                 theta_rad = math.atan((my * radius_y) / denominator)
                 theta_deg = math.degrees(theta_rad)
                 small_r = radius_x * math.tan(theta_rad)
-
         except Exception:
             st.error("Please enter valid numeric values.")
 
@@ -219,7 +212,6 @@ if theta_rad is not None:
     col6, col7, col8 = st.columns(3)
 
     with col6:
-        # No disabled=True — CSS pointer-events:none blocks editing without blurring
         st.text_input("Theta (radians)", value=round(theta_rad, 6))
 
     with col7:
@@ -227,3 +219,47 @@ if theta_rad is not None:
 
     with col8:
         st.text_input("r (mm)", value=round(small_r, 4))
+
+# --------------------------------
+# WEIGHT DISTRIBUTION EXPANDER
+# --------------------------------
+st.markdown("""
+<style>
+details summary p {
+    font-size: 20px !important;
+    font-weight: 600 !important;
+    color: #1F2937 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+with st.expander("Mass X Distribution"):
+
+    if theta_rad is not None:
+        mx = float(mass_x)
+
+        val_3_5mm = (0.8  * mx) / 1.8
+        val_3mm   = (0.1  * mx) / 0.11
+        val_2_5mm = (0.05 * mx) / 0.07
+        val_2mm   = (0.05 * mx) / 0.04
+
+        col_w1, col_w2, col_w3, col_w4 = st.columns(4)
+
+        with col_w1:
+            st.markdown("<p style='font-size:18px; font-weight:700;'>3.5mm</p>", unsafe_allow_html=True)
+            st.text_input("3.5mm value", value=round(val_3_5mm, 4), label_visibility="collapsed")
+
+        with col_w2:
+            st.markdown("<p style='font-size:18px; font-weight:700;'>3mm</p>", unsafe_allow_html=True)
+            st.text_input("3mm value", value=round(val_3mm, 4), label_visibility="collapsed")
+
+        with col_w3:
+            st.markdown("<p style='font-size:18px; font-weight:700;'>2.5mm</p>", unsafe_allow_html=True)
+            st.text_input("2.5mm value", value=round(val_2_5mm, 4), label_visibility="collapsed")
+
+        with col_w4:
+            st.markdown("<p style='font-size:18px; font-weight:700;'>2mm</p>", unsafe_allow_html=True)
+            st.text_input("2mm value", value=round(val_2mm, 4), label_visibility="collapsed")
+
+    else:
+        st.info("Calculate first to see weight distribution.")
