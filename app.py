@@ -238,28 +238,36 @@ with st.expander("Mass X Distribution"):
     if theta_rad is not None:
         mx = float(mass_x)
 
-        val_3_5mm = (0.8  * mx) / 1.8
-        val_3mm   = (0.1  * mx) / 0.11
-        val_2_5mm = (0.05 * mx) / 0.07
-        val_2mm   = (0.05 * mx) / 0.04
+        # --- 3.5mm ---
+        val_3_5mm = round((0.8 * mx) / 1.8)
+
+        # --- 3mm ---
+        remainder_after_3_5 = mx - (val_3_5mm * 1.8) 
+        val_3mm = round((remainder_after_3_5 -(remainder_after_3_5 * 0.1 / 0.11) * 0.11) )
+
+        # --- 2.5mm ---
+        val_2_5mm = round(val_3mm - ((val_3mm * 0.05 / 0.07) * 0.07) )
+
+        # --- 2mm ---
+        val_2mm = round(val_2_5mm - ((val_2_5mm * 0.05 / 0.04) * 0.04) )
 
         col_w1, col_w2, col_w3, col_w4 = st.columns(4)
 
         with col_w1:
             st.markdown("<p style='font-size:18px; font-weight:700;'>3.5mm</p>", unsafe_allow_html=True)
-            st.text_input("3.5mm value", value=round(val_3_5mm, 4), label_visibility="collapsed")
+            st.text_input("3.5mm value", value=val_3_5mm, label_visibility="collapsed")
 
         with col_w2:
             st.markdown("<p style='font-size:18px; font-weight:700;'>3mm</p>", unsafe_allow_html=True)
-            st.text_input("3mm value", value=round(val_3mm, 4), label_visibility="collapsed")
+            st.text_input("3mm value", value=val_3mm, label_visibility="collapsed")
 
         with col_w3:
             st.markdown("<p style='font-size:18px; font-weight:700;'>2.5mm</p>", unsafe_allow_html=True)
-            st.text_input("2.5mm value", value=round(val_2_5mm, 4), label_visibility="collapsed")
+            st.text_input("2.5mm value", value=val_2_5mm, label_visibility="collapsed")
 
         with col_w4:
             st.markdown("<p style='font-size:18px; font-weight:700;'>2mm</p>", unsafe_allow_html=True)
-            st.text_input("2mm value", value=round(val_2mm, 4), label_visibility="collapsed")
+            st.text_input("2mm value", value=val_2mm, label_visibility="collapsed")
 
     else:
         st.info("Calculate first to see weight distribution.")
